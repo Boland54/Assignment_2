@@ -1,12 +1,12 @@
 import chai from "chai";
 import request from "supertest";
 const mongoose = require("mongoose");
-import Movie from "../../../../api/movies/movieModel";
 import api from "../../../../index";
-import movies from "../../../../seedData/movies";
+import User from "../../../../api/users/userModel";
 
 const expect = chai.expect;
 let db;
+let user2token;
 
 describe("Movies endpoint", () => {
   before(() => {
@@ -27,55 +27,123 @@ describe("Movies endpoint", () => {
 
   beforeEach(async () => {
     try {
-      await Movie.deleteMany();
-      await Movie.collection.insertMany(movies);
+      await User.deleteMany();
+      // Register two users
+      await request(api).post("/api/users?action=register").send({
+        username: "user1",
+        password: "test1",
+      });
+      await request(api).post("/api/users?action=register").send({
+        username: "user2",
+        password: "test2",
+      });
     } catch (err) {
-      console.error(`failed to Load user Data: ${err}`);
+      console.error(`failed to Load user test Data: ${err}`);
     }
+    return request(api) 
+    .post("/api/users?action=authenticate")
+    .send({
+      username: "user2",
+      password: "test2",
+      
+    })
+    .expect(200)
+    .then((res) => {
+      expect(res.body.success).to.be.true;
+      expect(res.body.token).to.not.be.undefined;
+      user2token ="Bearer "+ res.body.token.substring(7); //assinging user2 a bearer token
+      console.log(user2token)
+
   });
-  afterEach(() => {
-    api.close(); // Release PORT 8080
+
   });
-  describe("GET /api/movies ", () => {
-    it("should return 20 movies and a status 200", (done) => {
+
+  describe("GET /api/movies/tmdb/.., returns object", () => {  
+    it("should return tmdb discover movies and a status 200", (done) => {
       request(api)
-        .get("/api/movies")
-        .set("Accept", "application/json")
-        .expect("Content-Type", /json/)
+        .get("/api/movies/tmdb/discover")
+        .set("Authorization", user2token )
         .expect(200)
         .end((err, res) => {
-          expect(res.body).to.be.a("array");
-          expect(res.body.length).to.equal(20);
+          expect(res.body).to.be.a("object");
+          // console.log(res.body)
           done();
         });
     });
+
+
+    it("should return tmdb upcoming movies and a status 200", (done) => {
+      request(api)
+        .get("/api/movies/tmdb/upcoming")
+        .set("Authorization", user2token )
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.be.a("object");
+          //console.log(res.body)
+          done();
+        });
+    });
+
+    it("should return tmdb trending movies and a status 200", (done) => {
+      request(api)
+        .get("/api/movies/tmdb/trending")
+        .set("Authorization", user2token )
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.be.a("object");
+          //console.log(res.body)
+          done();
+        });
+    });
+
+    it("should return tmdb the tv Shows and a status 200", (done) => {
+      request(api)
+        .get("/api/movies/tmdb/tvShows")
+        .set("Authorization", user2token )
+        .expect(200)
+        .end((err, res) => {
+          expect(res.body).to.be.a("object");
+          //console.log(res.body)
+          done();
+        });
+    });
+
   });
 
-  describe("GET /api/movies/:id", () => {
-    describe("when the id is valid", () => {
-      it("should return the matching movie", () => {
-        return request(api)
-          .get(`/api/movies/${movies[0].id}`)
-          .set("Accept", "application/json")
-          .expect("Content-Type", /json/)
+  describe("GET /api/movies/tmdb/.., returns the genres", () => {  
+
+      it("should return tmdb the tv Show genres  and a status 200", (done) => {
+        request(api)
+          .get("/api/movies/tmdb/tvGenres")
+          .set("Authorization", user2token )
           .expect(200)
-          .then((res) => {
-            expect(res.body).to.have.property("title", movies[0].title);
+          .end((err, res) => {
+            expect(res.body).to.be.a("object");
+            //console.log(res.body)
+            done();
           });
       });
-    });
-    describe("when the id is invalid", () => {
-      it("should return the NOT found message", () => {
-        return request(api)
-          .get("/api/movies/9999")
-          .set("Accept", "application/json")
-          .expect("Content-Type", /json/)
-          .expect(404)
-          .expect({
-            status_code: 404,
-            message: "The resource you requested could not be found.",
+
+      it("should return tmdb movies genres  and a status 200", (done) => {
+        request(api)
+          .get("/api/movies/tmdb/movieGenres")
+          .set("Authorization", user2token )
+          .expect(200)
+          .end((err, res) => {
+            expect(res.body).to.be.a("object");
+            done();
           });
       });
+  
+
     });
+
+
+
+
+
+  
+  afterEach(() => {
+    api.close(); // Release PORT 8080
   });
 });
