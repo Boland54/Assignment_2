@@ -27,7 +27,6 @@ describe("Users endpoint", () => {
   beforeEach(async () => {
     try {
       await User.deleteMany();
-      // Register two users
       await request(api).post("/api/users?action=register").send({
         username: "user1",
         password: "test1",
